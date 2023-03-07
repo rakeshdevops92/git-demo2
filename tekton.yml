@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: owasp-dependency-check
+spec:
+  workspaces:
+    - name: source
+    - name: report
+  params:
+    - name: suppressions
+      type: string
+      default: ""
+  steps:
+    - name: owasp-dependency-check
+      image: owasp/dependency-check
+      command:
+        - sh
+      args:
+        - -c
+        - |
+          if [ -n "$(params.suppressions)" ]; then
+            echo "$(params.suppressions)" > /tmp/suppressions.xml
+            dependency-check.sh --project "MyApp" --scan "$(workspaces.source.path)" --out "$(workspaces.report.path)" --suppression /tmp/suppressions.xml
+          else
+            dependency-check.sh --project "MyApp" --scan "$(workspaces.source.path)" --out "$(workspaces.report.path)"
+          fi
+      volumeMounts:
+        - name: report-volume
+          mountPath: /report
+        - name: source-volume
+          mountPath: /source
+  volumes:
+    - name: report-volume
+      emptyDir: {}
+    - name: source-volume
+      emptyDir: {}
